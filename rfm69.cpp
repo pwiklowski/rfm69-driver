@@ -169,46 +169,29 @@ int Rfm69::sendPacket(uint8_t* packet, uint16_t len) {
 }
 
 int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
-	uint8_t ack;
+	uint8_t ack = 0;
+	uint8_t expectedSeqNumber = 0;
 	uint8_t* bufPos = buf;
+	uint8_t chunk[RFM69_MAX_PAYLOAD+2];
+	uint16_t bytesToReceive = sizeof(syncSentence);
+	uint16_t bytesReceived = 0;
 
-	int bytesToReceive;
-
-	int bytesReceived = read(buf, RFM69_MAX_PAYLOAD, &ack);
-
-	if (bytesReceived < 0)
-		return 0;
-
-	if (bytesReceived != sizeof(syncSentence))
-		return -1;
-
-    if (ack != 0)
-		return -1;
-
-	bytesToReceive = (buf[9] << 8 | buf[10]);
-
-	bytesReceived = 0;
-
-	send(0, 0, ack);
-
+	int l = -1;
 	while (bytesToReceive > 0) {
 
-		uint8_t expectedSeqNumber = ack + 1;
-		uint8_t chunk[RFM69_MAX_PAYLOAD];
-
-		int l = -1;
-		while (1) {
-			l = read(chunk, RFM69_MAX_PAYLOAD, &ack);
-			if (l > 0)
-				break;
-
-            log("waiting for packet\n");
-
+	    for (int i = 0; i < 20; i++) {
+			l = read(chunk, RFM69_MAX_PAYLOAD+2, &ack);
+			if (l > 0) break;
+			rfm69hal_delay_ms(1);
 		}
+	    if (l<0) return -1;
 
-        log("received = %d %d\n", l, ack);
 		if (expectedSeqNumber != ack) {
             log("invalid ack %d %d\n", expectedSeqNumber, ack);
+		}else if (bytesReceived == sizeof(syncSentence) && ack == 0){
+			bytesToReceive = (buf[9] << 8 | buf[10]);
+			bytesReceived = 0;
+			log("received header size=%d\n", bytesToReceive);
 		} else {
 			memcpy(bufPos, chunk, l);
 			bufPos += l;
@@ -217,12 +200,14 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 			send(0, 0, ack);
 		}
 	}
+
+	log("receivePacket %d\n", bytesReceived);
 	return bytesReceived;
 }
 
 int Rfm69::sendWithAck(uint8_t* data, uint16_t len, uint8_t sequence) {
 	uint8_t buf[RFM69_MAX_PAYLOAD + 2];
-	for (int i = 0; i < 100; i++) {
+	for (int i = 0; i < 10; i++) {
         log("sendWithAck try=%d len=%d seq=%d\n", i, len, sequence);
 		send(data, len, sequence);
 
@@ -231,13 +216,13 @@ int Rfm69::sendWithAck(uint8_t* data, uint16_t len, uint8_t sequence) {
         log("read ack\n");
 		for(int t=0; t<10; t++) {
 			l = read(buf, RFM69_MAX_PAYLOAD, &ackSeq);
-			if (l > 0) break;
+			if (l == 0) break;
             log("waiting for ack\n");
-			rfm69hal_delay_ms(5);
+			rfm69hal_delay_ms(1);
 		}
         log("read ack %d \n", l);
 
-		if (ackSeq == sequence) {
+		if (l==0 && ackSeq == sequence) {
             log("received ack =%d\n", ackSeq);
 			return len;
 		} else {
@@ -324,10 +309,7 @@ void Rfm69::clearFIFO() {
 
 void Rfm69::waitForModeReady() {
 	uint32_t timeEntry = rfm69hal_get_timer_ms();
-
-	while (((readRegister(0x27) & 0x80) == 0)
-			&& ((rfm69hal_get_timer_ms() - timeEntry) < TIMEOUT_MODE_READY))
-		;
+	while (((readRegister(0x27) & 0x80) == 0) && ((rfm69hal_get_timer_ms() - timeEntry) < TIMEOUT_MODE_READY));
 }
 
 void Rfm69::sleep() {
