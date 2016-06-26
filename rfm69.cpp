@@ -8,8 +8,11 @@
 #include <unistd.h>
 
 extern "C" {
-#include "printf.h"
+    #include "printf.h"
 }
+
+
+#define log(line, ...) printf(line, ##__VA_ARGS__ )
 
 #define TIMEOUT_MODE_READY    1000000 ///< Maximum amount of time until mode switch [ms]
 #define TIMEOUT_PACKET_SENT   100 ///< Maximum amount of time until packet must be sent [ms]
@@ -139,7 +142,7 @@ bool Rfm69::setConfig(const uint8_t config[][2], unsigned int length) {
 int Rfm69::sendPacket(uint8_t* packet, uint16_t len) {
 	uint8_t sequence = 0;
 
-	printf_("sendPacket %d\n", len);
+    log("sendPacket %d\n", len);
 
 	uint16_t bytesToBeSent = len;
 	uint8_t* data = packet;
@@ -179,7 +182,7 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 	if (bytesReceived != sizeof(syncSentence))
 		return -1;
 
-	if (ack != 0)
+    if (ack != 0)
 		return -1;
 
 	bytesToReceive = (buf[9] << 8 | buf[10]);
@@ -199,13 +202,13 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 			if (l > 0)
 				break;
 
-			printf_("waiting for packet\n");
+            log("waiting for packet\n");
 
 		}
 
-		printf_("received = %d %d\n", l, ack);
+        log("received = %d %d\n", l, ack);
 		if (expectedSeqNumber != ack) {
-			printf_("invalid ack %d %d\n", expectedSeqNumber, ack);
+            log("invalid ack %d %d\n", expectedSeqNumber, ack);
 		} else {
 			memcpy(bufPos, chunk, l);
 			bufPos += l;
@@ -220,32 +223,32 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 int Rfm69::sendWithAck(uint8_t* data, uint16_t len, uint8_t sequence) {
 	uint8_t buf[RFM69_MAX_PAYLOAD + 2];
 	for (int i = 0; i < 100; i++) {
-		printf_("sendWithAck try=%d len=%d seq=%d\n", i, len, sequence);
+        log("sendWithAck try=%d len=%d seq=%d\n", i, len, sequence);
 		send(data, len, sequence);
 
 		uint8_t ackSeq;
 		int l;
-		printf_("read ack\n");
+        log("read ack\n");
 		for(int t=0; t<10; t++) {
 			l = read(buf, RFM69_MAX_PAYLOAD, &ackSeq);
 			if (l > 0) break;
-			printf_("waiting for ack\n");
+            log("waiting for ack\n");
 			rfm69hal_delay_ms(5);
 		}
-		printf_("read ack %d \n", l);
+        log("read ack %d \n", l);
 
 		if (ackSeq == sequence) {
-			printf_("received ack =%d\n", ackSeq);
+            log("received ack =%d\n", ackSeq);
 			return len;
 		} else {
-			printf_("wrong ack received, try again %d\n", i);
+            log("wrong ack received, try again %d\n", i);
 		}
 	}
 	return -1;
 }
 
 int Rfm69::send(uint8_t* data, unsigned int dataLength, uint8_t sequence) {
-	printf_("send %d\n", dataLength);
+    log("send %d\n", dataLength);
 	if (RFM69_MODE_SLEEP != m_mode) {
 		setMode(RFM69_MODE_STANDBY);
 		waitForModeReady();
@@ -387,7 +390,7 @@ int Rfm69::read(uint8_t* data, unsigned int dataLength, uint8_t* sequence) {
 		}
 
 		setMode(RFM69_MODE_RX);
-		printf_("read %d\n", bytesInChunk);
+        log("read %d\n", bytesInChunk);
 		return bytesInChunk;
 	} else
 		return -1;

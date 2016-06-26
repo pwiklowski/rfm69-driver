@@ -2,7 +2,7 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#define STM32
+#define STM32_
 
 #ifdef STM32
 #include "systimer.h"
@@ -74,19 +74,23 @@ uint32_t rfm69hal_get_timer_ms(){
 
 void rfm69hal_enable(bool enable){
 
-	if (enable)
+#ifdef STM32
+    if (enable)
 	    GPIOA->BRR = GPIO_Pin_4;
 	else
-		GPIOA->BSRR = GPIO_Pin_4;
+        GPIOA->BSRR = GPIO_Pin_4;
+#endif
 }
 
 uint8_t rfm69hal_transfer(uint8_t* bytes, uint16_t size){
-	for(uint16_t i=0; i<size; i++){
+#ifdef STM32
+    for(uint16_t i=0; i<size; i++){
 		while ((SPI1->SR & SPI_I2S_FLAG_TXE) == RESET);
 		SPI1->DR = bytes[i];
 		while ((SPI1->SR & SPI_I2S_FLAG_RXNE) == RESET);
 		bytes[i] = SPI1->DR;
-	}
+    }
+#endif
 
 #ifdef RPI
     wiringPiSPIDataRW(SPI_DEVICE, bytes,size);
