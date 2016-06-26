@@ -191,6 +191,8 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 	    log("received size=%d %d\n", l, ack);
 		if (expectedSeqNumber != ack) {
             log("invalid ack %d %d\n", expectedSeqNumber, ack);
+			if (ack < expectedSeqNumber) // remote didn't received our ack so reply
+				send(0, 0, ack);
 		} else if ((l == 11) && (ack == 0)){
 			bytesToReceive = (chunk[9] << 8 | chunk[10]);
 			bytesReceived = 0;
