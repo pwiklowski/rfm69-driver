@@ -136,7 +136,7 @@ bool Rfm69::setConfig(const uint8_t config[][2], unsigned int length) {
 			return false;
 		}
 	}
-	return false;
+	return true;
 }
 
 int Rfm69::sendPacket(uint8_t* packet, uint16_t len) {
@@ -165,6 +165,7 @@ int Rfm69::sendPacket(uint8_t* packet, uint16_t len) {
 			bytesToBeSent = 0;
 		}
 	}
+	return len;
 
 }
 
