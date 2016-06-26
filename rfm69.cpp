@@ -186,18 +186,24 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 		}
 	    if (l<0) return -1;
 
+
+	    log("received size=%d %d\n", l, ack);
 		if (expectedSeqNumber != ack) {
             log("invalid ack %d %d\n", expectedSeqNumber, ack);
-		}else if (bytesReceived == sizeof(syncSentence) && ack == 0){
-			bytesToReceive = (buf[9] << 8 | buf[10]);
+		} else if ((l == 11) && (ack == 0)){
+			bytesToReceive = (chunk[9] << 8 | chunk[10]);
 			bytesReceived = 0;
+			expectedSeqNumber = 1;
+			send(0, 0, ack);
 			log("received header size=%d\n", bytesToReceive);
 		} else {
+			log("received size=%d\n", bytesToReceive);
 			memcpy(bufPos, chunk, l);
 			bufPos += l;
 			bytesToReceive -= l;
 			bytesReceived += l;
 			send(0, 0, ack);
+			expectedSeqNumber++;
 		}
 	}
 
