@@ -224,7 +224,7 @@ int Rfm69::sendWithAck(uint8_t* data, uint16_t len, uint8_t sequence) {
 		int l;
         log("read ack\n");
 		for(int t=0; t<10; t++) {
-			l = read(buf, RFM69_MAX_PAYLOAD, &ackSeq);
+			l = read(buf, RFM69_MAX_PAYLOAD+2, &ackSeq);
 			if (l == 0) break;
             log("waiting for ack\n");
 			rfm69hal_delay_ms(1);
