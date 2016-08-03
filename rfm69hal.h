@@ -5,9 +5,15 @@
 #include <stdbool.h>
 
 #define RPI_
+#define STM32
 
 #ifdef RPI
 #include <wiringPiSPI.h>
+#endif
+
+
+#ifdef STM32
+#define log(line, ...) printf_(line, ##__VA_ARGS__ )
 #endif
 
 
@@ -18,11 +24,11 @@
 extern "C" {
 #endif
 
-        int rfm69hal_init();
-        void rfm69hal_delay_ms(uint32_t ms);
-        uint32_t rfm69hal_get_timer_ms();
-        void rfm69hal_enable(bool enable);
-        uint8_t rfm69hal_transfer(uint8_t* bytes, uint16_t size);
+	int rfm69hal_init();
+	void rfm69hal_delay_ms(uint32_t ms);
+	uint32_t rfm69hal_get_timer_ms();
+	void rfm69hal_enable(bool enable);
+	uint8_t rfm69hal_transfer(uint8_t* bytes, uint16_t size);
 
 #ifdef __cplusplus
 }

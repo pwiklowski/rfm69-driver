@@ -1,5 +1,9 @@
 #include "rfm69.h"
-#include "rfm69hal.h"
+
+
+extern "C" {
+	#include "rfm69hal.h"
+}
 #include "rfm69registers.h"
 
 #include <stdio.h>
@@ -12,7 +16,7 @@ extern "C" {
 }
 
 
-#define log(line, ...) printf(line, ##__VA_ARGS__ )
+
 
 #define TIMEOUT_MODE_READY    1000000 ///< Maximum amount of time until mode switch [ms]
 #define TIMEOUT_PACKET_SENT   100 ///< Maximum amount of time until packet must be sent [ms]
