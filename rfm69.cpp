@@ -132,15 +132,16 @@ void Rfm69::setPowerLevel(uint8_t power) {
 }
 
 bool Rfm69::setConfig(const uint8_t config[][2], unsigned int length) {
+	bool res = true;
 	for (unsigned int i = 0; i < length; i++) {
+		uint8_t set = config[i][1];
 		writeRegister(config[i][0], config[i][1]);
 		uint8_t val = readRegister(config[i][0]);
-
 		if (config[i][1] != val) {
-			return false;
+			res = false;
 		}
 	}
-	return true;
+	return res;
 }
 
 int Rfm69::sendPacket(uint8_t* packet, uint16_t len) {

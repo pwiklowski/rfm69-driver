@@ -2,15 +2,20 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#define STM32_
-
-#ifdef STM32
 #include "systimer.h"
+
+#ifdef STM32F10X_MD
 #include "stm32f10x.h"
 #include "stm32f10x_spi.h"
 #endif
 
+#ifdef STM32F030
+#include "stm32f0xx.h"
+#include "stm32f0xx_spi.h"
+#endif
 
+
+#define SPI1_DRB (*((uint8_t *)&SPI1->DR))
 uint64_t base;
 
 uint64_t get_current_ms(){
@@ -32,7 +37,50 @@ int rfm69hal_init(){
 #ifdef STM32
     base = get_current_ms();
 
-	RCC_APB2PeriphClockCmd(RCC_APB2Periph_SPI1, ENABLE);
+#ifdef STM32F10X_MD
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_AFIO, ENABLE);
+	RCC_APB2PeriphClockCmd(RCC_APB2ENR_IOPAEN, ENABLE);
+#endif
+
+	RCC_APB2PeriphClockCmd(RCC_APB2ENR_SPI1EN, ENABLE);
+
+#ifdef STM32F030
+
+	RCC_AHBPeriphClockCmd(RCC_AHBENR_GPIOAEN, ENABLE);
+
+	GPIO_InitTypeDef gpioStructure;
+
+	gpioStructure.GPIO_Pin = GPIO_Pin_6 ;
+	gpioStructure.GPIO_Mode = GPIO_Mode_AF;
+	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	gpioStructure.GPIO_OType= GPIO_OType_OD;
+	gpioStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &gpioStructure);
+
+	gpioStructure.GPIO_Pin = GPIO_Pin_5 | GPIO_Pin_7;
+	gpioStructure.GPIO_Mode = GPIO_Mode_AF;
+	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	gpioStructure.GPIO_OType= GPIO_OType_PP;
+	gpioStructure.GPIO_PuPd = GPIO_PuPd_NOPULL;
+	GPIO_Init(GPIOA, &gpioStructure);
+
+	gpioStructure.GPIO_Pin = GPIO_Pin_4;
+	gpioStructure.GPIO_Mode = GPIO_Mode_OUT;
+	gpioStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	gpioStructure.GPIO_OType= GPIO_OType_PP;
+	gpioStructure.GPIO_PuPd = GPIO_PuPd_DOWN;
+	GPIO_Init(GPIOA, &gpioStructure);
+
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource5, GPIO_AF_0);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource6, GPIO_AF_0);
+	GPIO_PinAFConfig(GPIOA, GPIO_PinSource7, GPIO_AF_0);
+
+
+
+
+
+
+#endif
 	// configure SPI
 	SPI_InitTypeDef SPI_InitStructure;
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
@@ -46,6 +94,10 @@ int rfm69hal_init(){
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
 	SPI_Init(SPI1, &SPI_InitStructure);
 	SPI_Cmd(SPI1, ENABLE);
+
+#ifdef STM32F030
+	SPI_RxFIFOThresholdConfig (SPI1, SPI_RxFIFOThreshold_QF);
+#endif
 
 #endif
 
@@ -86,9 +138,19 @@ uint8_t rfm69hal_transfer(uint8_t* bytes, uint16_t size){
 #ifdef STM32
     for(uint16_t i=0; i<size; i++){
 		while ((SPI1->SR & SPI_I2S_FLAG_TXE) == RESET);
+#ifdef STM32F10X_MD
 		SPI1->DR = bytes[i];
+#endif
+#ifdef STM32F030
+		SPI1_DRB = bytes[i];
+#endif
 		while ((SPI1->SR & SPI_I2S_FLAG_RXNE) == RESET);
+#ifdef STM32F10X_MD
+		bytes[i] = SPI1_DRB;
+#endif
+#ifdef STM32F030
 		bytes[i] = SPI1->DR;
+#endif
     }
 #endif
 
