@@ -16,9 +16,14 @@ extern "C" {
 }
 
 
+#ifdef STM32F030
+#define log_rfm69(line, ...) printf_(line, ## __VA_ARGS__)
+#else
+#define log_rfm69(line, ...) //fprintf(stderr, line, ## __VA_ARGS__)
+#endif
 
 
-#define TIMEOUT_MODE_READY    1000000 ///< Maximum amount of time until mode switch [ms]
+#define TIMEOUT_MODE_READY    1000 ///< Maximum amount of time until mode switch [ms]
 #define TIMEOUT_PACKET_SENT   100 ///< Maximum amount of time until packet must be sent [ms]
 #define TIMEOUT_CSMA_READY    500 ///< Maximum CSMA wait time for channel free detection [ms]
 #define CSMA_RSSI_THRESHOLD   -85 ///< If RSSI value is smaller than this, consider channel as free [dBm]
@@ -147,7 +152,7 @@ bool Rfm69::setConfig(const uint8_t config[][2], unsigned int length) {
 int Rfm69::sendPacket(uint8_t* packet, uint16_t len) {
 	uint8_t sequence = 0;
 
-    log("sendPacket %d\n", len);
+    log_rfm69("sendPacket %d\n", len);
 
 	uint16_t bytesToBeSent = len;
 	uint8_t* data = packet;
@@ -193,9 +198,9 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 	    if (l<0) return -1;
 
 
-	    log("received size=%d %d\n", l, ack);
+        log_rfm69("received size=%d %d\n", l, ack);
 		if (expectedSeqNumber != ack) {
-            log("invalid ack %d %d\n", expectedSeqNumber, ack);
+            log_rfm69("invalid ack %d %d\n", expectedSeqNumber, ack);
 			if (ack < expectedSeqNumber) // remote didn't received our ack so reply
 				send(0, 0, ack);
 		} else if ((l == 11) && (ack == 0)){
@@ -203,9 +208,9 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 			bytesReceived = 0;
 			expectedSeqNumber = 1;
 			send(0, 0, ack);
-			log("received header size=%d\n", bytesToReceive);
+            log_rfm69("received header size=%d\n", bytesToReceive);
 		} else {
-			log("received size=%d\n", bytesToReceive);
+            log_rfm69("received size=%d\n", bytesToReceive);
 			memcpy(bufPos, chunk, l);
 			bufPos += l;
 			bytesToReceive -= l;
@@ -215,45 +220,45 @@ int Rfm69::receivePacket(uint8_t* buf, uint16_t maxSize) {
 		}
 	}
 
-	log("receivePacket %d\n", bytesReceived);
+    log_rfm69("receivePacket %d\n", bytesReceived);
 	return bytesReceived;
 }
 
 int Rfm69::sendWithAck(uint8_t* data, uint16_t len, uint8_t sequence) {
 	uint8_t buf[RFM69_MAX_PAYLOAD + 2];
 	for (int i = 0; i < 10; i++) {
-        log("sendWithAck try=%d len=%d seq=%d\n", i, len, sequence);
+        log_rfm69("sendWithAck try=%d len=%d seq=%d\n", i, len, sequence);
 		send(data, len, sequence);
 
 		uint8_t ackSeq;
 		int l;
-        log("read ack\n");
+        log_rfm69("read ack\n");
 		for(int t=0; t<10; t++) {
 			l = read(buf, RFM69_MAX_PAYLOAD+2, &ackSeq);
 			if (l == 0) break;
-            log("waiting for ack\n");
+            log_rfm69("waiting for ack\n");
 			rfm69hal_delay_ms(1);
 		}
-        log("read ack %d \n", l);
+        log_rfm69("read ack %d \n", l);
 
 		if (l==0 && ackSeq == sequence) {
-            log("received ack =%d\n", ackSeq);
+            log_rfm69("received ack =%d\n", ackSeq);
 			return len;
 		} else {
-            log("wrong ack received, try again %d\n", i);
+            log_rfm69("wrong ack received, try again %d\n", i);
 		}
 	}
 	return -1;
 }
 
 int Rfm69::send(uint8_t* data, unsigned int dataLength, uint8_t sequence) {
-    log("send %d\n", dataLength);
+    log_rfm69("send %d\n", dataLength);
 	if (RFM69_MODE_SLEEP != m_mode) {
 		setMode(RFM69_MODE_STANDBY);
 		waitForModeReady();
 	}
 
-//  clearFIFO();
+	clearFIFO();
 
 	/* Wait for a free channel, if CSMA/CA algorithm is enabled.
 	 * This takes around 1,4 ms to finish if channel is free */
@@ -386,7 +391,7 @@ int Rfm69::read(uint8_t* data, unsigned int dataLength, uint8_t* sequence) {
 		}
 
 		setMode(RFM69_MODE_RX);
-        log("read %d\n", bytesInChunk);
+        log_rfm69("read %d\n", bytesInChunk);
 		return bytesInChunk;
 	} else
 		return -1;

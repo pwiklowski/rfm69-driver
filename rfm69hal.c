@@ -2,15 +2,16 @@
 #include <unistd.h>
 #include <sys/time.h>
 
-#include "systimer.h"
 
 #ifdef STM32F10X_MD
 #include "stm32f10x.h"
 #include "stm32f10x_spi.h"
+#include "systimer.h"
 #endif
 
 #ifdef STM32F030
 #include "stm32f0xx.h"
+#include "systimer.h"
 #include "stm32f0xx_spi.h"
 #endif
 
@@ -19,14 +20,14 @@
 uint64_t base;
 
 uint64_t get_current_ms(){
-#ifdef STM32
+#if defined(STM32F10X_MD) || defined(STM32F030)
 	return mstimer_get();
 #endif
 
 #ifdef RPI
     struct timeval te; 
-    gettimeofday(&te, NULL); // get current time
-    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000; // caculate milliseconds
+    gettimeofday(&te, NULL);
+    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
     return milliseconds;
 #endif
 }
@@ -34,7 +35,10 @@ uint64_t get_current_ms(){
 
 
 int rfm69hal_init(){
-#ifdef STM32
+
+
+
+#if defined(STM32F10X_MD) || defined(STM32F030)
     base = get_current_ms();
 
 #ifdef STM32F10X_MD
@@ -77,10 +81,8 @@ int rfm69hal_init(){
 
 
 
-
-
-
 #endif
+
 	// configure SPI
 	SPI_InitTypeDef SPI_InitStructure;
 	SPI_InitStructure.SPI_Direction = SPI_Direction_2Lines_FullDuplex;
@@ -89,9 +91,10 @@ int rfm69hal_init(){
 	SPI_InitStructure.SPI_CPOL = SPI_CPOL_Low;
 	SPI_InitStructure.SPI_CPHA = SPI_CPHA_1Edge;
 	SPI_InitStructure.SPI_NSS = SPI_NSS_Soft;
-	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_8;
+	SPI_InitStructure.SPI_BaudRatePrescaler = SPI_BaudRatePrescaler_2;
 	SPI_InitStructure.SPI_FirstBit = SPI_FirstBit_MSB;
 	SPI_InitStructure.SPI_CRCPolynomial = 7;
+
 	SPI_Init(SPI1, &SPI_InitStructure);
 	SPI_Cmd(SPI1, ENABLE);
 
@@ -113,7 +116,7 @@ void rfm69hal_delay_ms(uint32_t ms){
 	usleep(ms*1000);
 #endif
 
-#ifdef STM32
+#if defined(STM32F10X_MD) || defined(STM32F030)
 	delay_ms(ms);
 #endif
 
@@ -125,8 +128,7 @@ uint32_t rfm69hal_get_timer_ms(){
 }
 
 void rfm69hal_enable(bool enable){
-
-#ifdef STM32
+#if defined(STM32F10X_MD) || defined(STM32F030)
     if (enable)
 	    GPIOA->BRR = GPIO_Pin_4;
 	else
@@ -135,7 +137,7 @@ void rfm69hal_enable(bool enable){
 }
 
 uint8_t rfm69hal_transfer(uint8_t* bytes, uint16_t size){
-#ifdef STM32
+#if defined(STM32F10X_MD) || defined(STM32F030)
     for(uint16_t i=0; i<size; i++){
 		while ((SPI1->SR & SPI_I2S_FLAG_TXE) == RESET);
 #ifdef STM32F10X_MD

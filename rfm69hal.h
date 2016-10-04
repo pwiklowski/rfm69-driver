@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define RPI_
-#define STM32
+#define STM32_
 
 #ifdef RPI
 #include <wiringPiSPI.h>
@@ -15,6 +15,9 @@
 #ifdef STM32
 #define log(line, ...) printf_(line, ##__VA_ARGS__ )
 #endif
+
+
+
 
 
 #define SPI_SPEED 2000000
