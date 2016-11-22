@@ -11,12 +11,12 @@ extern "C" {
 #include <string.h>
 #include <unistd.h>
 
-extern "C" {
-    #include "printf.h"
-}
 
 
 #ifdef STM32F030
+extern "C" {
+    #include "printf.h"
+}
 #define log_rfm69(line, ...) printf_(line, ## __VA_ARGS__)
 #else
 #define log_rfm69(line, ...) //fprintf(stderr, line, ## __VA_ARGS__)
